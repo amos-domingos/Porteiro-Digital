@@ -6,14 +6,11 @@ import {
   Package, 
   MessageSquare, 
   Settings as SettingsIcon, 
-  Bell, 
   ShieldCheck, 
   Video, 
   ClipboardList, 
   CalendarDays, 
   PhoneCall, 
-  Wifi, 
-  WifiOff,
   BarChart3,
   Megaphone,
   History,
@@ -50,17 +47,39 @@ const App: React.FC = () => {
     };
   }, []);
 
+  // Lógica de Wake Lock para manter a tela ligada (Mobile/Tablet)
   useEffect(() => {
     let wakeLock: any = null;
     const requestWakeLock = async () => {
       try {
         if ('wakeLock' in navigator) {
           wakeLock = await (navigator as any).wakeLock.request('screen');
+          console.debug('Wake Lock is active');
+          
+          wakeLock.addEventListener('release', () => {
+            console.debug('Wake Lock was released');
+          });
         }
-      } catch (err: any) {}
+      } catch (err: any) {
+        console.error(`${err.name}, ${err.message}`);
+      }
     };
+
     requestWakeLock();
-    return () => { if (wakeLock) wakeLock.release(); };
+
+    // Re-solicitar wake lock quando o app voltar para o primeiro plano
+    const handleVisibilityChange = () => {
+      if (wakeLock !== null && document.visibilityState === 'visible') {
+        requestWakeLock();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => { 
+      if (wakeLock) wakeLock.release(); 
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   useEffect(() => {
@@ -143,33 +162,34 @@ const App: React.FC = () => {
       </aside>
 
       <main className="flex-1 flex flex-col overflow-hidden">
-        <header className="h-24 bg-white border-b border-slate-200 px-8 flex items-center justify-between shadow-sm shrink-0">
-          <div className="flex items-center gap-6">
-            <button onClick={() => setIsSidebarOpen(true)} className="p-3 bg-slate-900 rounded-2xl text-white shadow-xl hover:scale-105 transition-transform">
+        {/* Cabeçalho mais compacto para mobile (h-24 -> h-20) */}
+        <header className="h-20 sm:h-24 bg-white border-b border-slate-200 px-6 sm:px-8 flex items-center justify-between shadow-sm shrink-0">
+          <div className="flex items-center gap-4 sm:gap-6">
+            <button onClick={() => setIsSidebarOpen(true)} className="p-3 bg-slate-900 rounded-2xl text-white shadow-xl hover:scale-105 transition-transform active:scale-95">
                <Menu className="w-5 h-5" />
             </button>
-            <div className="hidden md:block">
-               <h1 className="text-xl font-black text-slate-900 tracking-tight">{viewTitles[activeView]}</h1>
-               <div className="flex items-center gap-2 mt-1">
-                  <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-500' : 'bg-rose-500'} animate-pulse`} />
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{isOnline ? 'Sincronizado' : 'Offline Mode'}</span>
+            <div className="min-w-0">
+               <h1 className="text-sm sm:text-xl font-black text-slate-900 tracking-tight truncate">{viewTitles[activeView]}</h1>
+               <div className="flex items-center gap-2 mt-0.5">
+                  <div className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-emerald-500' : 'bg-rose-500'} animate-pulse shrink-0`} />
+                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest truncate">{isOnline ? 'Sincronizado' : 'Offline Mode'}</span>
                </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-6">
-            <div className="h-14 w-36 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col items-center justify-center shadow-inner">
-               <span className="text-xl font-black text-slate-900 tracking-tighter leading-none">
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-28 sm:h-14 sm:w-36 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col items-center justify-center shadow-inner shrink-0">
+               <span className="text-base sm:text-xl font-black text-slate-900 tracking-tighter leading-none">
                   {currentTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                </span>
-               <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">
+               <span className="text-[8px] sm:text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">
                   {currentTime.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
                </span>
             </div>
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-4 sm:p-10 bg-slate-50/50 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-10 bg-slate-50/50 custom-scrollbar pb-12 sm:pb-10">
            <div className="max-w-[1400px] mx-auto">
               {activeView === 'dashboard' && <Dashboard />}
               {activeView === 'visitors' && <Visitors />}
