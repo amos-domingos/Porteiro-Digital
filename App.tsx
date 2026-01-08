@@ -15,7 +15,8 @@ import {
   Megaphone,
   History,
   Menu,
-  X
+  X,
+  AlertCircle
 } from 'lucide-react';
 import Dashboard from './components/Dashboard';
 import Visitors from './components/Visitors';
@@ -29,6 +30,7 @@ import AdminDashboard from './components/AdminDashboard';
 import Notices from './components/Notices';
 import AuditLog from './components/AuditLog';
 import { View } from './types';
+import { NativeBridge } from './services/nativeBridge';
 
 const App: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -36,6 +38,7 @@ const App: React.FC = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [wakeLockActive, setWakeLockActive] = useState(false);
+  const [emergencyAlert, setEmergencyAlert] = useState<string | null>(null);
 
   useEffect(() => {
     const goOnline = () => setIsOnline(true);
@@ -48,41 +51,28 @@ const App: React.FC = () => {
     };
   }, []);
 
-  // Função robusta para solicitar Wake Lock
+  // Lógica de Wake Lock e Native Bridge
   const requestWakeLock = useCallback(async () => {
-    if (!('wakeLock' in navigator)) return;
+    await NativeBridge.wakeDevice();
     
-    try {
-      const lock = await (navigator as any).wakeLock.request('screen');
-      setWakeLockActive(true);
-      console.debug('Nexus: Tela bloqueada (Always On)');
-      
-      lock.addEventListener('release', () => {
-        setWakeLockActive(false);
-        console.debug('Nexus: Wake Lock liberado');
-      });
-    } catch (err: any) {
-      // Silencia erros de política de permissão que ocorrem em alguns ambientes de preview
-      if (err.name !== 'NotAllowedError') {
-        console.error('Nexus WakeLock Error:', err.name, err.message);
+    if ('wakeLock' in navigator) {
+      try {
+        const lock = await (navigator as any).wakeLock.request('screen');
+        setWakeLockActive(true);
+        lock.addEventListener('release', () => setWakeLockActive(false));
+      } catch (err: any) {
+        if (err.name !== 'NotAllowedError') console.error('WakeLock Error:', err);
       }
     }
   }, []);
 
-  // Tenta ativar o wake lock no início e sempre que o app voltar a ficar visível
   useEffect(() => {
     requestWakeLock();
-    
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        requestWakeLock();
-      }
+      if (document.visibilityState === 'visible') requestWakeLock();
     };
-
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    // Adiciona um listener global para capturar o primeiro toque e garantir o wake lock
     window.addEventListener('click', requestWakeLock, { once: true });
-
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('click', requestWakeLock);
@@ -94,17 +84,26 @@ const App: React.FC = () => {
     return () => clearInterval(timer);
   }, []);
 
+  // Simulação de Alerta que "Acorda" o Sistema
+  const triggerEmergency = (msg: string) => {
+    setEmergencyAlert(msg);
+    NativeBridge.wakeDevice();
+    NativeBridge.sendCriticalAlert("ALERTA NEXUS", msg);
+    
+    // Tocar som de alerta
+    const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+    audio.play().catch(() => {});
+  };
+
   const menuItems = [
     { id: 'dashboard', label: 'Painel Geral', icon: LayoutDashboard, group: 'Operacional' },
     { id: 'cameras', label: 'Câmeras CFTV', icon: Video, group: 'Operacional' },
     { id: 'visitors', label: 'Visitantes', icon: Users, group: 'Operacional' },
     { id: 'deliveries', label: 'Encomendas', icon: Package, group: 'Operacional' },
-    
     { id: 'admin', label: 'Gestão & Dados', icon: BarChart3, group: 'Administrativo' },
     { id: 'notices', label: 'Mural de Avisos', icon: Megaphone, group: 'Administrativo' },
     { id: 'reservations', label: 'Reservas', icon: CalendarDays, group: 'Administrativo' },
     { id: 'occurrences', label: 'Ocorrências', icon: ClipboardList, group: 'Administrativo' },
-    
     { id: 'audit', label: 'Segurança & Log', icon: History, group: 'Sistemas' },
     { id: 'concierge', label: 'Nexus IA', icon: MessageSquare, group: 'Sistemas' },
     { id: 'settings', label: 'Configurações', icon: SettingsIcon, group: 'Sistemas' },
@@ -126,6 +125,22 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-slate-100 overflow-hidden relative font-sans">
+      
+      {/* OVERLAY DE EMERGÊNCIA (SIMULA APP EM PRIMEIRO PLANO) */}
+      {emergencyAlert && (
+        <div className="fixed inset-0 z-[1000] bg-rose-600 flex flex-col items-center justify-center p-10 text-white animate-in fade-in duration-300">
+           <AlertCircle className="w-32 h-32 mb-8 animate-bounce" />
+           <h2 className="text-4xl font-black mb-4 uppercase tracking-tighter text-center">Alerta de Segurança</h2>
+           <p className="text-xl font-bold mb-12 text-center max-w-md">{emergencyAlert}</p>
+           <button 
+             onClick={() => setEmergencyAlert(null)}
+             className="px-12 py-5 bg-white text-rose-600 rounded-[32px] font-black text-xl uppercase shadow-2xl active:scale-95 transition-all"
+           >
+             Ciente / Desativar
+           </button>
+        </div>
+      )}
+
       {isSidebarOpen && (
         <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-40 transition-opacity" onClick={() => setIsSidebarOpen(false)} />
       )}
@@ -162,8 +177,11 @@ const App: React.FC = () => {
         </nav>
 
         <div className="p-6 border-t border-slate-800">
-           <button className="w-full flex items-center gap-3 p-3 bg-emerald-500/10 text-emerald-500 rounded-xl font-bold text-[10px] uppercase">
-              <PhoneCall className="w-4 h-4" /> Chamada de Emergência
+           <button 
+             onClick={() => triggerEmergency("Botão de pânico acionado manualmente pelo terminal.")}
+             className="w-full flex items-center gap-3 p-3 bg-rose-500/10 text-rose-500 rounded-xl font-bold text-[10px] uppercase hover:bg-rose-500 hover:text-white transition-all"
+           >
+              <PhoneCall className="w-4 h-4" /> Emergência Crítica
            </button>
         </div>
       </aside>
@@ -181,6 +199,7 @@ const App: React.FC = () => {
                   <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest truncate">
                     {isOnline ? 'Sincronizado' : 'Offline Mode'} 
                     {wakeLockActive && ' • Tela Ativa'}
+                    {NativeBridge.isNative() && ' • Nativo APK'}
                   </span>
                </div>
             </div>
