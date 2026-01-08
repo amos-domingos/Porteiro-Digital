@@ -147,11 +147,27 @@ export const chatWithConcierge = async (prompt: string, history: any[], imageBas
     currentParts.push({ inlineData: { data: cleanBase64, mimeType: 'image/jpeg' } });
   }
   contents.push({ role: 'user', parts: currentParts });
+  
+  // REGIMENTO INTERNO MOCK (CONTEXTO PARA IA)
+  const regimentoInterno = `
+    REGRAS DO CONDOMÍNIO NEXUS:
+    1. Horário de Silêncio: 22:00 às 08:00.
+    2. Mudanças: Devem ser agendadas com 72h de antecedência. Apenas de Segunda a Sexta das 08h às 17h.
+    3. Piscina: Aberta das 07h às 22h. Proibido garrafas de vidro.
+    4. Obras: Permitidas de Segunda a Sexta das 08h às 18h.
+    5. Visitantes: Devem ser cadastrados via App.
+    6. Reservas de Salão: Valor de R$ 150,00 descontado no boleto.
+  `;
+
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
     contents: contents,
     config: {
-      systemInstruction: "Você é o Nexus, o cérebro de uma portaria 100% autônoma.",
+      systemInstruction: `Você é o Nexus, o cérebro de uma portaria 100% autônoma. 
+      Você possui acesso ao REGIMENTO INTERNO do condomínio: ${regimentoInterno}.
+      Sempre responda de forma cordial, premium e informativa. 
+      Se o morador perguntar sobre regras, use o regimento acima. 
+      Se ele perguntar sobre encomendas ou finanças, diga que ele pode ver os detalhes nos módulos específicos do App.`,
     }
   });
   return response.text || "Desculpe, não consegui entender.";

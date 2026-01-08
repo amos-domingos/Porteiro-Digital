@@ -55,6 +55,15 @@ export interface Notice {
   category: 'event' | 'maintenance' | 'security' | 'general';
 }
 
+export interface Invoice {
+  id: string;
+  month: string;
+  dueDate: string;
+  value: number;
+  status: 'paid' | 'pending' | 'overdue';
+  type: 'condo' | 'extra';
+}
+
 export interface AuditEntry {
   id: string;
   action: string;
@@ -64,4 +73,5 @@ export interface AuditEntry {
   status: 'success' | 'warning' | 'alert';
 }
 
-export type View = 'dashboard' | 'visitors' | 'deliveries' | 'concierge' | 'cameras' | 'occurrences' | 'reservations' | 'settings' | 'admin' | 'notices' | 'audit';
+export type UserRole = 'resident' | 'admin' | 'concierge_desk';
+export type View = 'dashboard' | 'visitors' | 'deliveries' | 'concierge' | 'cameras' | 'occurrences' | 'reservations' | 'settings' | 'admin' | 'notices' | 'audit' | 'financial';
