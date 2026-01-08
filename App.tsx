@@ -42,7 +42,6 @@ const App: React.FC = () => {
   const [userRole, setUserRole] = useState<UserRole>('admin');
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const [wakeLockActive, setWakeLockActive] = useState(false);
   const [emergencyAlert, setEmergencyAlert] = useState<string | null>(null);
 
   useEffect(() => {
@@ -58,13 +57,6 @@ const App: React.FC = () => {
 
   const requestWakeLock = useCallback(async () => {
     await NativeBridge.wakeDevice();
-    if ('wakeLock' in navigator) {
-      try {
-        const lock = await (navigator as any).wakeLock.request('screen');
-        setWakeLockActive(true);
-        lock.addEventListener('release', () => setWakeLockActive(false));
-      } catch (err: any) {}
-    }
   }, []);
 
   useEffect(() => {
@@ -87,9 +79,9 @@ const App: React.FC = () => {
 
   const triggerEmergency = (msg: string) => {
     setEmergencyAlert(msg);
+    // Força o despertar do hardware
     NativeBridge.wakeDevice();
-    NativeBridge.sendCriticalAlert("ALERTA NEXUS", msg);
-    new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3').play().catch(() => {});
+    NativeBridge.sendCriticalAlert("ALERTA NEXUS CRÍTICO", msg);
   };
 
   const menuItems = [
@@ -127,12 +119,18 @@ const App: React.FC = () => {
   return (
     <div className="flex h-screen bg-slate-100 overflow-hidden relative font-sans text-slate-900">
       
+      {/* OVERLAY DE EMERGÊNCIA - PRIMEIRO PLANO VISUAL */}
       {emergencyAlert && (
-        <div className="fixed inset-0 z-[1000] bg-rose-600 flex flex-col items-center justify-center p-10 text-white animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-[2000] bg-rose-600 flex flex-col items-center justify-center p-10 text-white animate-in fade-in duration-300">
            <AlertCircle className="w-32 h-32 mb-8 animate-bounce" />
            <h2 className="text-4xl font-black mb-4 uppercase tracking-tighter text-center">Alerta Crítico</h2>
            <p className="text-xl font-bold mb-12 text-center max-w-md">{emergencyAlert}</p>
-           <button onClick={() => setEmergencyAlert(null)} className="px-12 py-5 bg-white text-rose-600 rounded-[32px] font-black text-xl uppercase shadow-2xl active:scale-95 transition-all">Desativar Alerta</button>
+           <button 
+             onClick={() => setEmergencyAlert(null)} 
+             className="px-12 py-5 bg-white text-rose-600 rounded-[32px] font-black text-xl uppercase shadow-2xl active:scale-95 transition-all"
+           >
+             Ciente / Desativar
+           </button>
         </div>
       )}
 
@@ -189,7 +187,6 @@ const App: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-4">
-            {/* ROLE SWITCHER */}
             <div className="hidden sm:flex relative group">
                <button className="flex items-center gap-3 px-4 py-2 bg-slate-50 rounded-xl border border-slate-200 hover:bg-white transition-all">
                   <UserCircle className="w-5 h-5 text-blue-600" />

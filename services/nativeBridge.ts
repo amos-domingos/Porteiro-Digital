@@ -1,40 +1,54 @@
 
 /**
  * Nexus Native Bridge
- * Este serviço gerencia a comunicação com wrappers nativos (Capacitor/Cordova)
- * para funções que o navegador padrão não permite por segurança.
+ * Gerencia comunicação com wrappers nativos (Capacitor/Cordova)
  */
 
 export const NativeBridge = {
-  // Verifica se está rodando como APK (via Capacitor)
   isNative: () => {
     return (window as any).Capacitor !== undefined;
   },
 
-  // Tenta "acordar" o dispositivo via código nativo injetado
   wakeDevice: async () => {
-    console.log("Nexus: Tentando acordar dispositivo...");
+    console.log("Nexus: Solicitando ativação da tela...");
     
+    // 1. Tenta API Web padrão (Wake Lock)
+    if ('wakeLock' in navigator) {
+      try { 
+        await (navigator as any).wakeLock.request('screen');
+        console.log("Nexus: WakeLock web ativado.");
+      } catch (e) {
+        console.warn("Nexus: WakeLock web falhou.", e);
+      }
+    }
+
+    // 2. Se for nativo, tenta chamar plugins específicos
     if (NativeBridge.isNative()) {
       try {
-        // Exemplo de chamada para um plugin customizado do Capacitor
-        // await (window as any).Capacitor.Plugins.NexusNative.wakeScreen();
+        const { Device, Insomnia } = (window as any).Capacitor.Plugins;
+        if (Insomnia) await Insomnia.keepAwake();
+        // No Android nativo, isso exigiria um plugin customizado para call FLAG_TURN_SCREEN_ON
       } catch (e) {
-        console.error("Erro ao chamar função nativa:", e);
-      }
-    } else {
-      // Fallback para PWA: Usa WakeLock API para manter ligada se já estiver visível
-      if ('wakeLock' in navigator) {
-        try { await (navigator as any).wakeLock.request('screen'); } catch (e) {}
+        console.error("Nexus: Erro em comando nativo Insomnia:", e);
       }
     }
   },
 
-  // Envia notificação crítica que aparece sobre outros apps
-  // Fix: Removed 'sticky' property as it is not part of the standard NotificationOptions type.
   sendCriticalAlert: (title: string, body: string) => {
+    // Alerta sonoro imediato
+    const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+    audio.play().catch(() => console.warn("Auto-play de áudio bloqueado."));
+
     if (Notification.permission === 'granted') {
-      new Notification(title, { body, silent: false });
+      // FIX: Cast to any as 'renotify' property is supported by browsers but might be missing in standard lib.dom.d.ts NotificationOptions
+      new Notification(title, { 
+        body, 
+        icon: 'https://cdn-icons-png.flaticon.com/512/9374/9374944.png',
+        tag: 'nexus-critical',
+        renotify: true
+      } as any);
+    } else if (Notification.permission !== 'denied') {
+      Notification.requestPermission();
     }
   }
 };

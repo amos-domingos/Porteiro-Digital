@@ -54,13 +54,14 @@ const Notices: React.FC = () => {
       {activeTab === 'avisos' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 animate-in fade-in duration-300">
           {INITIAL_NOTICES.map(notice => {
-            const IconConfig = icons[notice.category];
-            const CategoryIcon = IconConfig.icon;
+            // Extraindo a configuração de ícone para variáveis simples para evitar erro de JSX
+            const categoryConfig = icons[notice.category] || icons.general;
+            const CategoryIcon = categoryConfig.icon;
             
             return (
               <div key={notice.id} className="bg-white rounded-[32px] p-8 border border-slate-100 shadow-sm hover:shadow-xl transition-all relative overflow-hidden group">
                  <div className="flex items-start justify-between mb-6">
-                    <div className={`p-4 rounded-2xl ${IconConfig.color}`}>
+                    <div className={`p-4 rounded-2xl ${categoryConfig.color}`}>
                        <CategoryIcon className="w-6 h-6" />
                     </div>
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{notice.date}</span>
