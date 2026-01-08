@@ -53,27 +53,32 @@ const Notices: React.FC = () => {
 
       {activeTab === 'avisos' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 animate-in fade-in duration-300">
-          {INITIAL_NOTICES.map(notice => (
-            <div key={notice.id} className="bg-white rounded-[32px] p-8 border border-slate-100 shadow-sm hover:shadow-xl transition-all relative overflow-hidden group">
-               <div className="flex items-start justify-between mb-6">
-                  <div className={`p-4 rounded-2xl ${icons[notice.category].color}`}>
-                     <icons[notice.category].icon className="w-6 h-6" />
-                  </div>
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{notice.date}</span>
-               </div>
-               
-               <h4 className="text-xl font-black text-slate-800 leading-tight mb-4">{notice.title}</h4>
-               <p className="text-sm text-slate-500 leading-relaxed mb-8">{notice.content}</p>
-               
-               <div className="pt-6 border-t border-slate-50 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                     <div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center font-bold text-slate-400 text-xs">{notice.author[0]}</div>
-                     <span className="text-xs font-bold text-slate-400">{notice.author}</span>
-                  </div>
-                  <button className="text-[10px] font-black text-blue-600 uppercase tracking-widest hover:underline">Ver Detalhes</button>
-               </div>
-            </div>
-          ))}
+          {INITIAL_NOTICES.map(notice => {
+            const IconConfig = icons[notice.category];
+            const CategoryIcon = IconConfig.icon;
+            
+            return (
+              <div key={notice.id} className="bg-white rounded-[32px] p-8 border border-slate-100 shadow-sm hover:shadow-xl transition-all relative overflow-hidden group">
+                 <div className="flex items-start justify-between mb-6">
+                    <div className={`p-4 rounded-2xl ${IconConfig.color}`}>
+                       <CategoryIcon className="w-6 h-6" />
+                    </div>
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{notice.date}</span>
+                 </div>
+                 
+                 <h4 className="text-xl font-black text-slate-800 leading-tight mb-4">{notice.title}</h4>
+                 <p className="text-sm text-slate-500 leading-relaxed mb-8">{notice.content}</p>
+                 
+                 <div className="pt-6 border-t border-slate-50 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                       <div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center font-bold text-slate-400 text-xs">{notice.author[0]}</div>
+                       <span className="text-xs font-bold text-slate-400">{notice.author}</span>
+                    </div>
+                    <button className="text-[10px] font-black text-blue-600 uppercase tracking-widest hover:underline">Ver Detalhes</button>
+                 </div>
+              </div>
+            );
+          })}
         </div>
       )}
 
