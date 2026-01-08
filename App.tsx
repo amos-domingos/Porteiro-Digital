@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   LayoutDashboard, 
   Users, 
@@ -35,6 +35,7 @@ const App: React.FC = () => {
   const [activeView, setActiveView] = useState<View>('dashboard');
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [wakeLockActive, setWakeLockActive] = useState(false);
 
   useEffect(() => {
     const goOnline = () => setIsOnline(true);
@@ -47,40 +48,46 @@ const App: React.FC = () => {
     };
   }, []);
 
-  // Lógica de Wake Lock para manter a tela ligada (Mobile/Tablet)
-  useEffect(() => {
-    let wakeLock: any = null;
-    const requestWakeLock = async () => {
-      try {
-        if ('wakeLock' in navigator) {
-          wakeLock = await (navigator as any).wakeLock.request('screen');
-          console.debug('Wake Lock is active');
-          
-          wakeLock.addEventListener('release', () => {
-            console.debug('Wake Lock was released');
-          });
-        }
-      } catch (err: any) {
-        console.error(`${err.name}, ${err.message}`);
+  // Função robusta para solicitar Wake Lock
+  const requestWakeLock = useCallback(async () => {
+    if (!('wakeLock' in navigator)) return;
+    
+    try {
+      const lock = await (navigator as any).wakeLock.request('screen');
+      setWakeLockActive(true);
+      console.debug('Nexus: Tela bloqueada (Always On)');
+      
+      lock.addEventListener('release', () => {
+        setWakeLockActive(false);
+        console.debug('Nexus: Wake Lock liberado');
+      });
+    } catch (err: any) {
+      // Silencia erros de política de permissão que ocorrem em alguns ambientes de preview
+      if (err.name !== 'NotAllowedError') {
+        console.error('Nexus WakeLock Error:', err.name, err.message);
       }
-    };
+    }
+  }, []);
 
+  // Tenta ativar o wake lock no início e sempre que o app voltar a ficar visível
+  useEffect(() => {
     requestWakeLock();
-
-    // Re-solicitar wake lock quando o app voltar para o primeiro plano
+    
     const handleVisibilityChange = () => {
-      if (wakeLock !== null && document.visibilityState === 'visible') {
+      if (document.visibilityState === 'visible') {
         requestWakeLock();
       }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    // Adiciona um listener global para capturar o primeiro toque e garantir o wake lock
+    window.addEventListener('click', requestWakeLock, { once: true });
 
-    return () => { 
-      if (wakeLock) wakeLock.release(); 
+    return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('click', requestWakeLock);
     };
-  }, []);
+  }, [requestWakeLock]);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -162,7 +169,6 @@ const App: React.FC = () => {
       </aside>
 
       <main className="flex-1 flex flex-col overflow-hidden">
-        {/* Cabeçalho mais compacto para mobile (h-24 -> h-20) */}
         <header className="h-20 sm:h-24 bg-white border-b border-slate-200 px-6 sm:px-8 flex items-center justify-between shadow-sm shrink-0">
           <div className="flex items-center gap-4 sm:gap-6">
             <button onClick={() => setIsSidebarOpen(true)} className="p-3 bg-slate-900 rounded-2xl text-white shadow-xl hover:scale-105 transition-transform active:scale-95">
@@ -172,7 +178,10 @@ const App: React.FC = () => {
                <h1 className="text-sm sm:text-xl font-black text-slate-900 tracking-tight truncate">{viewTitles[activeView]}</h1>
                <div className="flex items-center gap-2 mt-0.5">
                   <div className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-emerald-500' : 'bg-rose-500'} animate-pulse shrink-0`} />
-                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest truncate">{isOnline ? 'Sincronizado' : 'Offline Mode'}</span>
+                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest truncate">
+                    {isOnline ? 'Sincronizado' : 'Offline Mode'} 
+                    {wakeLockActive && ' • Tela Ativa'}
+                  </span>
                </div>
             </div>
           </div>

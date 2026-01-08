@@ -49,6 +49,11 @@ const Dashboard: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const startDoorman = async () => {
+    // Tenta reativar o Wake Lock via interação do usuário
+    if ('wakeLock' in navigator) {
+      try { await (navigator as any).wakeLock.request('screen'); } catch (e) {}
+    }
+    
     setDoormanActive(true);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
