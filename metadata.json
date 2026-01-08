@@ -1,0 +1,8 @@
+{
+  "name": "Nexus Portaria Inteligente",
+  "description": "Um sistema futurista de gestão predial e portaria virtual com IA, apresentando registro de visitantes, rastreamento de encomendas e concierge multimodal.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
